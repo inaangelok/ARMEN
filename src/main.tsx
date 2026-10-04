@@ -17,10 +17,10 @@ import "@fontsource/noto-sans/cyrillic-400.css";
 import "@fontsource/noto-sans/cyrillic-500.css";
 import "@fontsource/noto-sans/cyrillic-600.css";
 import "@fontsource/noto-sans/cyrillic-700.css";
-import "./i18n";
-import "./index.css";
-import App from "./App";
-import { AuthProvider } from "./lib/auth";
+import "@/presentation/i18n";
+import "@/presentation/styles/index.css";
+import App from "@/presentation/App";
+import { AuthProvider } from "@/presentation/providers/auth";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 } } });
 // The single-file demo build is served from an arbitrary path, so it uses hash routing.

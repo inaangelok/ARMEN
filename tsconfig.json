@@ -19,5 +19,5 @@
     "paths": { "@/*": ["src/*"] },
     "types": ["vite/client"]
   },
-  "include": ["src", "supabase/functions/_shared/rules.ts"]
+  "include": ["src"]
 }

@@ -5,8 +5,8 @@
  *   INGEST_URL=https://<project>.supabase.co/functions/v1/ingest \
  *   DEVICE_KEY=armen-gw-... STATION_SERIAL=ARM-S30-2025-0101 npm run simulate
  */
-import { buildDataset } from "../src/lib/sim/dataset";
-import { buildGatewayPayload } from "../src/lib/sim/payload";
+import { buildDataset } from "../src/infrastructure/simulation/dataset";
+import { buildGatewayPayload } from "../src/infrastructure/simulation/payload";
 
 const ingestUrl = process.env.INGEST_URL;
 const deviceKey = process.env.DEVICE_KEY;

@@ -11,8 +11,8 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
-import { buildDataset, DEMO_PASSWORD } from "../src/lib/sim/dataset";
-import { DAY_MS, HOUR_MS, STEP_MS, cyclesAt, dailyAgg, dayStartMs, localDayIndex, modulesAt, snapshotAt } from "../src/lib/sim/model";
+import { buildDataset, DEMO_PASSWORD } from "../src/infrastructure/simulation/dataset";
+import { DAY_MS, HOUR_MS, STEP_MS, cyclesAt, dailyAgg, dayStartMs, localDayIndex, modulesAt, snapshotAt } from "../src/infrastructure/simulation/model";
 
 const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
