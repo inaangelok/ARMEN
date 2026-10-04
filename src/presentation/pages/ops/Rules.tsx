@@ -10,13 +10,15 @@ import { Skeleton } from "@/presentation/components/ui/misc";
 import { PageHeader } from "@/presentation/components/PageHeader";
 import { SeverityBadge } from "@/presentation/components/StatusBadge";
 import { useRules } from "@/presentation/hooks/data";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
+import { errorMessage } from "@/presentation/lib/errors";
 import { useAuth } from "@/presentation/providers/auth";
 import { ago } from "@/presentation/lib/format";
 import type { AlertRule } from "@/domain/model";
 
 function RuleRow({ rule, editable }: { rule: AlertRule; editable: boolean }) {
   const { t } = useTranslation();
+  const alertsUc = useServices().commands.alerts;
   const [w, setW] = useState(rule.warning_threshold ?? 0);
   const [c, setC] = useState(rule.critical_threshold ?? 0);
   useEffect(() => {
@@ -26,8 +28,12 @@ function RuleRow({ rule, editable }: { rule: AlertRule; editable: boolean }) {
   const dirty = w !== rule.warning_threshold || c !== rule.critical_threshold;
   const invalid = rule.operator === ">" ? c <= w : c >= w;
   const save = async () => {
-    await api.updateRule(rule.id, { warning_threshold: w, critical_threshold: c });
-    toast.success(t("rules.saved"));
+    try {
+      await alertsUc.updateThresholds(rule, w, c);
+      toast.success(t("rules.saved"));
+    } catch (e) {
+      toast.error(errorMessage(e));
+    }
   };
   return (
     <tr className="align-middle">
@@ -64,7 +70,7 @@ function RuleRow({ rule, editable }: { rule: AlertRule; editable: boolean }) {
         </td>
       )}
       <td className="px-3 py-3">
-        <Switch checked={rule.enabled} disabled={!editable} onCheckedChange={async (v) => api.updateRule(rule.id, { enabled: v })} aria-label={t("rules.enabled")} />
+        <Switch checked={rule.enabled} disabled={!editable} onCheckedChange={async (v) => alertsUc.setRuleEnabled(rule.id, v)} aria-label={t("rules.enabled")} />
       </td>
       <td className="px-3 py-3 text-xs text-muted-foreground">{ago(rule.updated_at)}</td>
       <td className="px-3 py-3">

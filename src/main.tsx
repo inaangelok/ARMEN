@@ -21,6 +21,11 @@ import "@/presentation/i18n";
 import "@/presentation/styles/index.css";
 import App from "@/presentation/App";
 import { AuthProvider } from "@/presentation/providers/auth";
+import { ServicesProvider } from "@/presentation/providers/services";
+import { createServices } from "@/composition-root";
+
+// Composition root: build the application once and hand it to the UI.
+const services = createServices();
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 } } });
 // The single-file demo build is served from an arbitrary path, so it uses hash routing.
@@ -28,13 +33,15 @@ const Router = import.meta.env.MODE === "singlefile" ? HashRouter : BrowserRoute
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthProvider>
-          <App />
-          <Toaster position="top-center" richColors closeButton />
-        </AuthProvider>
-      </Router>
-    </QueryClientProvider>
+    <ServicesProvider services={services}>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <AuthProvider>
+            <App />
+            <Toaster position="top-center" richColors closeButton />
+          </AuthProvider>
+        </Router>
+      </QueryClientProvider>
+    </ServicesProvider>
   </React.StrictMode>,
 );

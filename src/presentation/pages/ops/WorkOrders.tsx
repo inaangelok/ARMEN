@@ -12,7 +12,8 @@ import { ToneBadge } from "@/presentation/components/StatusBadge";
 import { CreateWorkOrderDialog } from "@/presentation/components/ops/CreateWorkOrderDialog";
 import { WorkOrderDialog } from "@/presentation/components/ops/WorkOrderDialog";
 import { useProfiles, useStations, useWorkOrders } from "@/presentation/hooks/data";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
+import { errorMessage } from "@/presentation/lib/errors";
 import { date } from "@/presentation/lib/format";
 import { priorityTone } from "@/presentation/lib/tone";
 import { cn } from "@/presentation/lib/utils";
@@ -76,6 +77,7 @@ function Column({ status, children, count }: { status: WorkOrderStatus; children
 
 export function WorkOrders() {
   const { t } = useTranslation();
+  const { workOrders } = useServices().commands;
   const wos = useWorkOrders();
   const stations = useStations();
   const profiles = useProfiles();
@@ -103,9 +105,12 @@ export function WorkOrders() {
       toast.info(t("wo.completeInDialog"));
       return;
     }
-    if (wo.status === "done") return;
-    await api.updateWorkOrder(wo.id, { status: to });
-    toast.success(t("wo.moved", { number: wo.number, status: t(`woStatus.${to}`) }));
+    try {
+      await workOrders.moveWorkOrder(wo, to);
+      toast.success(t("wo.moved", { number: wo.number, status: t(`woStatus.${to}`) }));
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
   };
   const current = (wos.data ?? []).find((w) => w.id === openId) ?? null;
   const cutoff = Date.now() - 30 * 86400000;

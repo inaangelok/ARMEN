@@ -1,7 +1,8 @@
-// Alert rule evaluation — pure TypeScript shared by the Edge Function (Deno)
-// and the browser demo (Vite imports this file directly). No runtime imports.
+// Alert rule evaluation (domain service).
+// Pure TypeScript with NO imports, so the very same file also runs in the Supabase Edge Function (Deno):
+// `npm run sync:shared` copies it to supabase/functions/_shared/rules.ts and a unit test keeps the two identical.
 
-export type Severity = "info" | "warning" | "critical";
+export type RuleSeverity = "info" | "warning" | "critical";
 
 export interface RuleLike {
   code: string;
@@ -10,7 +11,7 @@ export interface RuleLike {
   operator: ">" | "<" | null;
   warning_threshold: number | null;
   critical_threshold: number | null;
-  event_severity: Severity | null;
+  event_severity: RuleSeverity | null;
   enabled: boolean;
 }
 
@@ -37,12 +38,12 @@ export interface StationInput {
 
 export interface AlertCandidate {
   code: string;
-  severity: Severity;
+  severity: RuleSeverity;
   module_id: string | null;
   params: Record<string, string | number>;
 }
 
-function level(rule: RuleLike, value: number): Severity | null {
+function level(rule: RuleLike, value: number): RuleSeverity | null {
   const cmp = (t: number | null) => t !== null && (rule.operator === "<" ? value < t : value > t);
   if (cmp(rule.critical_threshold)) return "critical";
   if (cmp(rule.warning_threshold)) return "warning";
@@ -100,3 +101,21 @@ export function evaluateRules(rules: RuleLike[], station: StationInput, modules:
 
 /** Key used to de-duplicate open alerts (one open alert per code + module). */
 export const alertKey = (a: { code: string; module_id: string | null }) => `${a.code}:${a.module_id ?? "-"}`;
+
+/**
+ * Thresholds must be ordered in the direction of the rule: for "value > threshold" rules the
+ * critical level is above the warning level, for "value < threshold" rules it is below.
+ */
+export function validateThresholds(operator: ">" | "<" | null, warning: number, critical: number): void {
+  if (!Number.isFinite(warning) || !Number.isFinite(critical)) throw new RuleValidationError("THRESHOLD_NOT_NUMBER");
+  const ok = operator === "<" ? critical < warning : critical > warning;
+  if (!ok) throw new RuleValidationError("THRESHOLD_ORDER");
+}
+
+/** Thrown by validateThresholds. Kept dependency-free so this file can also run in the Deno Edge Function. */
+export class RuleValidationError extends Error {
+  constructor(readonly code: "THRESHOLD_ORDER" | "THRESHOLD_NOT_NUMBER") {
+    super(code);
+    this.name = "RuleValidationError";
+  }
+}

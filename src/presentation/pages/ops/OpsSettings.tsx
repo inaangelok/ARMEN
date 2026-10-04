@@ -2,10 +2,11 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/ui/card";
 import { PageHeader } from "@/presentation/components/PageHeader";
 import { LanguageCard, NotificationsCard } from "@/presentation/pages/owner/OwnerSettings";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
 
 export function OpsSettings() {
   const { t } = useTranslation();
+  const { info } = useServices();
   return (
     <div className="space-y-4">
       <PageHeader title={t("settings.title")} />
@@ -19,7 +20,7 @@ export function OpsSettings() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p>
-            {t("settings.backend")}: <b>{api.mode === "demo" ? t("settings.backendDemo") : "Supabase"}</b>
+            {t("settings.backend")}: <b>{info.mode === "demo" ? t("settings.backendDemo") : "Supabase"}</b>
           </p>
           <p className="text-muted-foreground">{t("settings.ingestInfo")}</p>
           <pre className="overflow-x-auto rounded-xl bg-brand-900 p-3 text-[11px] text-brand-100">{`POST /functions/v1/ingest

@@ -12,28 +12,14 @@ import { WoStepper } from "@/presentation/components/WoStepper";
 import { ToneBadge } from "@/presentation/components/StatusBadge";
 import { useCustomers, useDocuments, useServiceHistory, useWorkOrders } from "@/presentation/hooks/data";
 import { useCurrentStation } from "@/presentation/hooks/useCurrentStation";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
+import { serviceSchedule as domainServiceSchedule } from "@/domain";
 import { date } from "@/presentation/lib/format";
 import { generateDocumentPdf } from "@/presentation/lib/pdf";
 import type { DocumentRec, Station } from "@/domain/model";
 
-function addMonths(iso: string, months: number) {
-  const d = new Date(iso);
-  d.setMonth(d.getMonth() + months);
-  return d;
-}
-
-/** Next 6-monthly inspection and next annual coolant + fire-system check. */
-export function serviceSchedule(station: Station) {
-  const install = station.install_date;
-  const now = Date.now();
-  let k = 1;
-  while (addMonths(install, 12 * k).getTime() < now - 86400000) k++;
-  return {
-    inspection: station.next_service_date,
-    annual: addMonths(install, 12 * k).toISOString().slice(0, 10),
-  };
-}
+/** Next 6-monthly inspection and next annual coolant + fire-system check (rule lives in the domain). */
+export const serviceSchedule = (station: Station) => domainServiceSchedule(station, Date.now());
 
 export function WarrantyCard({ station }: { station: Station }) {
   const { t } = useTranslation();
@@ -65,11 +51,12 @@ export function WarrantyCard({ station }: { station: Station }) {
 
 export function DocumentsList({ station }: { station: Station }) {
   const { t } = useTranslation();
+  const { workOrders } = useServices().commands;
   const docs = useDocuments();
   const customers = useCustomers();
   const list = (docs.data ?? []).filter((d) => d.station_id === station.id);
   const open = async (d: DocumentRec) => {
-    const url = d.storage_path ? await api.resolveFileUrl(d.storage_path) : null;
+    const url = d.storage_path ? await workOrders.resolveFileUrl(d.storage_path) : null;
     if (url) window.open(url, "_blank", "noopener");
     else await generateDocumentPdf(d, station, customers.data?.find((c) => c.id === station.customer_id));
   };

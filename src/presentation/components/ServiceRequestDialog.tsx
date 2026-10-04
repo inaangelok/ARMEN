@@ -7,13 +7,15 @@ import { Button } from "@/presentation/components/ui/button";
 import { Input, Textarea } from "@/presentation/components/ui/input";
 import { Label } from "@/presentation/components/ui/label";
 import { NativeSelect } from "@/presentation/components/ui/select";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
+import { errorMessage } from "@/presentation/lib/errors";
 import type { IssueType, Station } from "@/domain/model";
 
 const ISSUES: IssueType[] = ["alert", "performance", "noise", "physical_damage", "app_data", "other"];
 
 export function ServiceRequestDialog({ station, open, onOpenChange }: { station: Station; open: boolean; onOpenChange: (o: boolean) => void }) {
   const { t } = useTranslation();
+  const { workOrders } = useServices().commands;
   const [issue, setIssue] = useState<IssueType>("performance");
   const [desc, setDesc] = useState("");
   const [dateStr, setDateStr] = useState("");
@@ -25,14 +27,12 @@ export function ServiceRequestDialog({ station, open, onOpenChange }: { station:
     e.preventDefault();
     setBusy(true);
     try {
-      const wo = await api.createWorkOrder({
-        station_id: station.id,
-        type: "repair",
-        issue_type: issue,
+      const wo = await workOrders.requestService({
+        stationId: station.id,
+        issue,
         title: t(`issueType.${issue}`),
         description: desc,
-        preferred_date: dateStr || null,
-        priority: issue === "physical_damage" ? "high" : "normal",
+        preferredDate: dateStr || null,
         photos: files,
       });
       toast.success(t("request.created", { number: wo.number }));
@@ -41,7 +41,7 @@ export function ServiceRequestDialog({ station, open, onOpenChange }: { station:
       setFiles([]);
       setDateStr("");
     } catch (err) {
-      toast.error(String((err as Error).message));
+      toast.error(errorMessage(err));
     } finally {
       setBusy(false);
     }

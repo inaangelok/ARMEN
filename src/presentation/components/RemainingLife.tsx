@@ -2,8 +2,9 @@ import { Hourglass } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/ui/card";
 import { Skeleton } from "@/presentation/components/ui/misc";
-import { estimateYearsTo80 } from "@/infrastructure/simulation/model";
+import { estimateYearsTo80, yearsUntil } from "@/domain";
 import { num } from "@/presentation/lib/format";
+import { useServices } from "@/presentation/providers/services";
 import type { HistoryPoint } from "@/domain/model";
 
 export function RemainingLife({ history, loading, warrantyEnd }: { history: HistoryPoint[] | undefined; loading: boolean; warrantyEnd?: string }) {
@@ -11,7 +12,8 @@ export function RemainingLife({ history, loading, warrantyEnd }: { history: Hist
   const pts = (history ?? []).map((p) => ({ t: Date.parse(p.ts), soh: p.soh }));
   const est = estimateYearsTo80(pts);
   const current = pts.at(-1)?.soh;
-  const warrantyYears = warrantyEnd ? (Date.parse(warrantyEnd) - Date.now()) / (365.25 * 86400000) : null;
+  const { clock } = useServices();
+  const warrantyYears = warrantyEnd ? yearsUntil(warrantyEnd, clock.now()) : null;
   return (
     <Card>
       <CardHeader className="flex-row items-center gap-2 space-y-0">

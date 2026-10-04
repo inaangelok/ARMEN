@@ -12,13 +12,15 @@ import { Skeleton } from "@/presentation/components/ui/misc";
 import { Badge } from "@/presentation/components/ui/badge";
 import { PageHeader } from "@/presentation/components/PageHeader";
 import { useCustomers, useProfiles, useStations } from "@/presentation/hooks/data";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
+import { errorMessage } from "@/presentation/lib/errors";
 import type { Region, Role } from "@/domain/model";
 
 const ROLE_VARIANT: Record<Role, "default" | "info" | "secondary"> = { admin: "default", technician: "info", owner: "secondary" };
 
 export function Users() {
   const { t } = useTranslation();
+  const usersUc = useServices().commands.users;
   const profiles = useProfiles();
   const stations = useStations();
   const customers = useCustomers();
@@ -36,12 +38,12 @@ export function Users() {
   const invite = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.inviteUser(form);
+      await usersUc.inviteUser(form);
       toast.success(t("users.invited", { email: form.email }));
       setInviting(false);
       setForm({ email: "", full_name: "", role: "owner" });
     } catch (err) {
-      toast.error((err as Error).message === "invite_function_missing" ? t("users.inviteMissing") : (err as Error).message);
+      toast.error((err as Error).message === "invite_function_missing" ? t("users.inviteMissing") : errorMessage(err));
     }
   };
   return (
@@ -97,7 +99,7 @@ export function Users() {
                         <NativeSelect
                           value={p.role}
                           onChange={async (e) => {
-                            await api.updateProfile(p.id, { role: e.target.value as Role });
+                            await usersUc.changeRole(p.id, e.target.value as Role);
                             toast.success(t("users.updated"));
                           }}
                           className="w-36"
@@ -113,7 +115,7 @@ export function Users() {
                     </td>
                     <td className="px-3 py-2.5">
                       {p.role === "technician" ? (
-                        <NativeSelect value={p.region ?? ""} onChange={(e) => api.updateProfile(p.id, { region: (e.target.value || null) as Region | null })} className="w-36" aria-label={t("fleet.region")}>
+                        <NativeSelect value={p.region ?? ""} onChange={(e) => usersUc.changeRegion(p.id, (e.target.value || null) as Region | null)} className="w-36" aria-label={t("fleet.region")}>
                           <option value="">—</option>
                           <option value="Aragatsotn">{t("region.Aragatsotn")}</option>
                           <option value="Yerevan">{t("region.Yerevan")}</option>

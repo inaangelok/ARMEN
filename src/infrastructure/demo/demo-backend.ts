@@ -28,7 +28,7 @@ import type {
   Alert, AlertCode, DailyEnergy, HistoryPoint, ModuleReading, Profile, RangeKey, Station, StationSnapshot, WorkOrder,
 } from "@/domain/model";
 import { CHECKLIST_TEMPLATES } from "@/domain/services/maintenance";
-import type { Api, LiveEvent, ModuleHistoryPoint, PowerPoint } from "@/application/ports/backend";
+import type { Backend, LiveEvent, ModuleHistoryPoint, PowerPoint } from "@/application/ports";
 
 const SESSION_KEY = "armen-care-demo-session";
 const store = {
@@ -47,7 +47,7 @@ const newId = (p: string) => uuidFrom(`${p}:${Date.now()}:${idSeq++}:${Math.rand
 
 const EVALUATED: AlertCode[] = ["MODULE_OVER_TEMP", "CELL_IMBALANCE", "SOH_LOW", "COOLANT_HIGH", "COOLING_PUMP_FAULT", "FIRE_SYSTEM_FAULT", "FIRE_TRIGGERED", "INVERTER_ERROR", "GRID_OUTAGE"];
 
-export function createDemoApi(): Api {
+export function createDemoBackend(): Backend {
   const ds: Dataset = buildDataset(Date.now());
   let me: Profile | null = null;
   const sessionEmail = store.get(SESSION_KEY);
@@ -199,7 +199,7 @@ export function createDemoApi(): Api {
   const moduleStation = (moduleId: string) => ds.modules.find((m) => m.id === moduleId)?.station_id ?? ds.assignments.find((a) => a.module_id === moduleId)?.station_id ?? null;
 
   // ------------------------------------------------------------ API
-  const api: Api = {
+  const api: Backend = {
     mode: "demo",
     demoAccounts: [
       { role: "owner", email: "owner@demo.armencare.am", name: "Aram Petrosyan", password: DEMO_PASSWORD },

@@ -11,14 +11,15 @@ import { PageHeader } from "@/presentation/components/PageHeader";
 import { LANGS } from "@/presentation/components/LanguageSwitcher";
 import { EMERGENCY } from "@/presentation/components/FireInstructions";
 import { useCurrentStation } from "@/presentation/hooks/useCurrentStation";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
+import { errorMessage } from "@/presentation/lib/errors";
 import { useAuth } from "@/presentation/providers/auth";
-import { enablePush } from "@/infrastructure/browser/web-push";
 import { cn } from "@/presentation/lib/utils";
-import type { Lang, OperatingMode, Profile } from "@/domain/model";
+import type { Lang, OperatingMode } from "@/domain/model";
 
 export function LanguageCard() {
   const { t, i18n } = useTranslation();
+  const { auth } = useServices().commands;
   const { setUser } = useAuth();
   return (
     <Card>
@@ -31,7 +32,7 @@ export function LanguageCard() {
             key={l.code}
             onClick={async () => {
               await i18n.changeLanguage(l.code);
-              setUser(await api.updateMyProfile({ language: l.code as Lang }));
+              setUser(await auth.changeLanguage(l.code as Lang));
             }}
             className={cn("rounded-xl border-2 px-3 py-3 text-sm font-semibold", i18n.language === l.code ? "border-brand-700 bg-secondary" : "hover:bg-muted")}
             aria-pressed={i18n.language === l.code}
@@ -46,11 +47,12 @@ export function LanguageCard() {
 
 export function NotificationsCard() {
   const { t } = useTranslation();
+  const { auth } = useServices().commands;
   const { user, setUser } = useAuth();
   const [perm, setPerm] = useState<string>(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
   if (!user) return null;
-  const toggle = async (k: keyof Profile, v: boolean) => setUser(await api.updateMyProfile({ [k]: v } as Partial<Profile>));
-  const rows: { k: keyof Profile; label: string; hint: string }[] = [
+  const toggle = async (k: "notify_email" | "notify_push" | "notify_warning" | "notify_info", v: boolean) => setUser(await auth.updateNotificationPreferences({ [k]: v }));
+  const rows: { k: "notify_email" | "notify_push" | "notify_warning" | "notify_info"; label: string; hint: string }[] = [
     { k: "notify_email", label: t("settings.email"), hint: t("settings.emailHint", { email: user.email }) },
     { k: "notify_push", label: t("settings.push"), hint: t("settings.pushHint") },
     { k: "notify_warning", label: t("settings.warnings"), hint: t("settings.warningsHint") },
@@ -77,8 +79,9 @@ export function NotificationsCard() {
             variant="outline"
             className="mt-2 w-full"
             onClick={async () => {
-              const p = await enablePush(api.savePushSubscription);
+              const { permission: p, profile } = await auth.enablePushNotifications();
               setPerm(p);
+              if (profile) setUser(profile);
               if (p === "granted") toast.success(t("settings.pushEnabled"));
             }}
           >
@@ -92,6 +95,7 @@ export function NotificationsCard() {
 
 function OperatingModeCard() {
   const { t } = useTranslation();
+  const stationsUc = useServices().commands.stations;
   const { station } = useCurrentStation();
   const [mode, setMode] = useState<OperatingMode>("self_consumption");
   const [reserve, setReserve] = useState(20);
@@ -103,8 +107,12 @@ function OperatingModeCard() {
   }, [station]);
   if (!station) return <Skeleton className="h-48" />;
   const save = async () => {
-    await api.updateStation(station.id, { operating_mode: mode, backup_reserve_pct: reserve });
-    toast.success(t("settings.saved"));
+    try {
+      await stationsUc.setOperatingMode(station.id, mode, reserve);
+      toast.success(t("settings.saved"));
+    } catch (e) {
+      toast.error(errorMessage(e));
+    }
   };
   const opt = (m: OperatingMode) => (
     <button

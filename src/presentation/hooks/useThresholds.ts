@@ -1,13 +1,13 @@
 import { useRules } from "@/presentation/hooks/data";
 import { useAuth } from "@/presentation/providers/auth";
-import { DEFAULT_RULES } from "@/infrastructure/simulation/dataset";
+import { DEFAULT_ALERT_RULES } from "@/domain";
 
 /** Effective warning thresholds (live rules for staff; defaults for owners, who cannot read rules). */
 export function useThresholds() {
   const { user } = useAuth();
   const staff = user?.role !== "owner";
   const rules = useRules();
-  const src = staff && rules.data ? rules.data : DEFAULT_RULES;
+  const src = staff && rules.data ? rules.data : DEFAULT_ALERT_RULES;
   const get = (code: string) => src.find((r) => r.code === code);
   return {
     tempWarn: get("MODULE_OVER_TEMP")?.warning_threshold ?? 45,

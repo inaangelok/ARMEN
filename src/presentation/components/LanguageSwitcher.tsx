@@ -1,6 +1,6 @@
 import { Globe } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
 import { useAuth } from "@/presentation/providers/auth";
 import type { Lang } from "@/domain/model";
 
@@ -13,9 +13,10 @@ export const LANGS: { code: Lang; label: string }[] = [
 export function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
   const { user, setUser } = useAuth();
+  const { auth } = useServices().commands;
   const change = async (code: Lang) => {
     await i18n.changeLanguage(code);
-    if (user) setUser(await api.updateMyProfile({ language: code }));
+    if (user) setUser(await auth.changeLanguage(code));
   };
   return (
     <label className="relative flex items-center gap-1 rounded-full border bg-background px-2.5 py-1.5 text-xs font-semibold">

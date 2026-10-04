@@ -15,7 +15,7 @@ import { HistoryCharts } from "@/presentation/components/charts/HistoryCharts";
 import { ReplaceModuleDialog } from "@/presentation/components/ops/ReplaceModuleDialog";
 import { useAssignments, useModuleHistory, useModules, useSnapshots, useStations } from "@/presentation/hooks/data";
 import { useQueries } from "@tanstack/react-query";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
 import { date, num } from "@/presentation/lib/format";
 import type { Tone } from "@/presentation/lib/tone";
 import type { Module, ModuleStatus } from "@/domain/model";
@@ -24,6 +24,7 @@ const STATUS_TONE: Record<ModuleStatus, Tone> = { active: "ok", faulty: "crit", 
 
 function Traceability({ module, open, onOpenChange, onReplace }: { module: Module | null; open: boolean; onOpenChange: (o: boolean) => void; onReplace: (m: Module) => void }) {
   const { t } = useTranslation();
+  const modulesUc = useServices().commands.modules;
   const assignments = useAssignments();
   const stations = useStations();
   const history = useModuleHistory(open && module?.station_id ? module.id : undefined, "12m");
@@ -46,7 +47,7 @@ function Traceability({ module, open, onOpenChange, onReplace }: { module: Modul
               variant="outline"
               disabled={module.status === "faulty"}
               onClick={async () => {
-                await api.markModuleFaulty(module.id, t("replace.markedFromApp"));
+                await modulesUc.markModuleFaulty(module.id, t("replace.markedFromApp"));
                 toast.success(t("replace.markedFaulty", { pos: `${module.row}-${module.slot}` }));
               }}
             >
@@ -110,6 +111,7 @@ function Traceability({ module, open, onOpenChange, onReplace }: { module: Modul
 
 export function Modules() {
   const { t } = useTranslation();
+  const { queries } = useServices();
   const modules = useModules();
   const stations = useStations();
   useSnapshots();
@@ -119,7 +121,7 @@ export function Modules() {
   const [sel, setSel] = useState<string | null>(null);
   const [replacing, setReplacing] = useState<Module | null>(null);
   const stationIds = [...new Set((modules.data ?? []).map((m) => m.station_id).filter(Boolean))] as string[];
-  const readings = useQueries({ queries: stationIds.map((id) => ({ queryKey: ["modulesLatest", id, "registry"], queryFn: () => api.getModuleReadings(id) })) });
+  const readings = useQueries({ queries: stationIds.map((id) => ({ queryKey: ["modulesLatest", id, "registry"], queryFn: () => queries.getModuleReadings(id) })) });
   const sohById = new Map(readings.flatMap((r) => r.data ?? []).map((r) => [r.module_id, r.soh]));
   const list = useMemo(
     () =>

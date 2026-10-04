@@ -25,10 +25,11 @@ import { CreateWorkOrderDialog } from "@/presentation/components/ops/CreateWorkO
 import { WorkOrderDialog } from "@/presentation/components/ops/WorkOrderDialog";
 import { useAlerts, useCustomers, useEvents, useFleet, useModuleReadings, useModules, usePowerSeries, useProfiles, useRawTelemetry, useStations, useWorkOrders } from "@/presentation/hooks/data";
 import { useThresholds } from "@/presentation/hooks/useThresholds";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
+import { errorMessage } from "@/presentation/lib/errors";
 import { useAuth } from "@/presentation/providers/auth";
 import { amd, date, dateTime, kwh, num, pct, time } from "@/presentation/lib/format";
-import { SIZE_SPECS } from "@/infrastructure/simulation/model";
+import { SIZE_SPECS } from "@/domain";
 import { priorityTone, woStatusTone } from "@/presentation/lib/tone";
 import { cn } from "@/presentation/lib/utils";
 import type { Alert, Module, Station } from "@/domain/model";
@@ -176,13 +177,18 @@ function EventLog({ station }: { station: Station }) {
 
 function StationSettings({ station }: { station: Station }) {
   const { t } = useTranslation();
+  const stationsUc = useServices().commands.stations;
   const { user } = useAuth();
   const profiles = useProfiles();
   const [form, setForm] = useState({ technician_id: station.technician_id ?? "", tariff_amd: station.tariff_amd, export_tariff_amd: station.export_tariff_amd, next_service_date: station.next_service_date ?? "", operating_mode: station.operating_mode, backup_reserve_pct: station.backup_reserve_pct });
   const isAdmin = user?.role === "admin";
   const save = async () => {
-    await api.updateStation(station.id, { ...form, technician_id: form.technician_id || null, next_service_date: form.next_service_date || null });
-    toast.success(t("settings.saved"));
+    try {
+      await stationsUc.updateDetails(station.id, { ...form, technician_id: form.technician_id || null, next_service_date: form.next_service_date || null });
+      toast.success(t("settings.saved"));
+    } catch (e) {
+      toast.error(errorMessage(e));
+    }
   };
   return (
     <Card className="max-w-2xl">
@@ -234,6 +240,7 @@ function StationSettings({ station }: { station: Station }) {
 export function StationDetail() {
   const { id } = useParams();
   const { t } = useTranslation();
+  const { commands } = useServices();
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") ?? "overview";
   const stations = useStations();
@@ -263,7 +270,7 @@ export function StationDetail() {
         size="sm"
         disabled={m.status === "faulty"}
         onClick={async () => {
-          await api.markModuleFaulty(m.id, t("replace.markedFromApp"));
+          await commands.modules.markModuleFaulty(m.id, t("replace.markedFromApp"));
           toast.success(t("replace.markedFaulty", { pos: `${m.row}-${m.slot}` }));
         }}
       >
@@ -345,8 +352,8 @@ export function StationDetail() {
             <AlertItem
               key={a.id}
               alert={a}
-              onAck={() => api.setAlertStatus(a.id, "acknowledged")}
-              onResolve={() => api.setAlertStatus(a.id, "resolved")}
+              onAck={() => commands.alerts.acknowledgeAlert(a.id)}
+              onResolve={() => commands.alerts.resolveAlert(a.id)}
               onCreateWO={stWos.some((w) => w.alert_id === a.id && w.status !== "done") ? undefined : () => setWoFromAlert(a)}
             />
           ))}

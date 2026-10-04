@@ -1,11 +1,12 @@
+// React Query bindings for the application's queries, plus live-update wiring.
+// Views read data only through these hooks; writes go through `useServices().commands`.
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { api } from "@/composition-root";
 import i18n from "@/presentation/i18n";
-import type { Alert, ModuleReading, RangeKey, StationSnapshot } from "@/domain/model";
-import { stationStatus, healthLabel, worstSeverity } from "@/presentation/lib/tone";
+import { buildFleetRows, type ModuleReading, type RangeKey, type StationSnapshot } from "@/domain";
 import { useAuth } from "@/presentation/providers/auth";
+import { useServices } from "@/presentation/providers/services";
 
 const k = {
   stations: ["stations"],
@@ -25,43 +26,91 @@ const k = {
 };
 
 const uid = () => useAuth().user?.id ?? "anon";
+const useQ = () => useServices().queries;
 
-export const useStations = () => useQuery({ queryKey: [...k.stations, uid()], queryFn: api.listStations });
-export const useCustomers = () => useQuery({ queryKey: [...k.customers, uid()], queryFn: api.listCustomers });
-export const useSnapshots = () => useQuery({ queryKey: [...k.snapshots, uid()], queryFn: api.getSnapshots, refetchInterval: api.mode === "supabase" ? 60_000 : false });
-export const useModuleReadings = (stationId?: string) =>
-  useQuery({ queryKey: [...k.modulesLatest(stationId ?? ""), uid()], queryFn: () => api.getModuleReadings(stationId!), enabled: !!stationId });
-export const useAlerts = () => useQuery({ queryKey: [...k.alerts, uid()], queryFn: api.listAlerts });
-export const useWorkOrders = () => useQuery({ queryKey: [...k.workOrders, uid()], queryFn: api.listWorkOrders });
-export const useChecklist = (woId?: string) => useQuery({ queryKey: [...k.checklist(woId ?? ""), uid()], queryFn: () => api.listChecklist(woId!), enabled: !!woId });
-export const useRules = () => useQuery({ queryKey: [...k.rules, uid()], queryFn: api.listRules });
-export const useModules = () => useQuery({ queryKey: [...k.modules, uid()], queryFn: api.listModules });
-export const useAssignments = () => useQuery({ queryKey: [...k.assignments, uid()], queryFn: api.listAssignments });
-export const useProfiles = () => useQuery({ queryKey: [...k.profiles, uid()], queryFn: api.listProfiles });
-export const useServiceHistory = () => useQuery({ queryKey: [...k.history, uid()], queryFn: api.listServiceHistory });
-export const useDocuments = () => useQuery({ queryKey: [...k.documents, uid()], queryFn: api.listDocuments });
-export const useEvents = (stationId?: string) => useQuery({ queryKey: [...k.events(stationId ?? ""), uid()], queryFn: () => api.listEvents(stationId!), enabled: !!stationId });
-export const useStationHistory = (stationId: string | undefined, range: RangeKey) =>
-  useQuery({ queryKey: ["stationHistory", stationId, range, uid()], queryFn: () => api.getStationHistory(stationId!, range), enabled: !!stationId, staleTime: 5 * 60_000 });
-export const useModuleHistory = (moduleId: string | undefined, range: RangeKey) =>
-  useQuery({ queryKey: ["moduleHistory", moduleId, range, uid()], queryFn: () => api.getModuleHistory(moduleId!, range), enabled: !!moduleId, staleTime: 5 * 60_000 });
-export const usePowerSeries = (stationId?: string) =>
-  useQuery({ queryKey: ["power", stationId, uid()], queryFn: () => api.getPowerSeries(stationId!), enabled: !!stationId, refetchInterval: 60_000 });
-export const useDaily = (stationId: string | undefined, from: string, to: string) =>
-  useQuery({ queryKey: ["daily", stationId, from, to, uid()], queryFn: () => api.getDaily(stationId!, from, to), enabled: !!stationId, staleTime: 5 * 60_000 });
-export const useRawTelemetry = (stationId?: string, limit = 200) =>
-  useQuery({ queryKey: ["raw", stationId, limit, uid()], queryFn: () => api.getRawTelemetry(stationId!, limit), enabled: !!stationId });
+export const useStations = () => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.stations, uid()], queryFn: q.listStations });
+};
+export const useCustomers = () => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.customers, uid()], queryFn: q.listCustomers });
+};
+export const useSnapshots = () => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.snapshots, uid()], queryFn: q.getSnapshots, refetchInterval: useServices().info.mode === "supabase" ? 60_000 : false });
+};
+export const useModuleReadings = (stationId?: string) => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.modulesLatest(stationId ?? ""), uid()], queryFn: () => q.getModuleReadings(stationId!), enabled: !!stationId });
+};
+export const useAlerts = () => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.alerts, uid()], queryFn: q.listAlerts });
+};
+export const useWorkOrders = () => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.workOrders, uid()], queryFn: q.listWorkOrders });
+};
+export const useChecklist = (woId?: string) => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.checklist(woId ?? ""), uid()], queryFn: () => q.listChecklist(woId!), enabled: !!woId });
+};
+export const useRules = () => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.rules, uid()], queryFn: q.listRules });
+};
+export const useModules = () => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.modules, uid()], queryFn: q.listModules });
+};
+export const useAssignments = () => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.assignments, uid()], queryFn: q.listAssignments });
+};
+export const useProfiles = () => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.profiles, uid()], queryFn: q.listProfiles });
+};
+export const useServiceHistory = () => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.history, uid()], queryFn: q.listServiceHistory });
+};
+export const useDocuments = () => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.documents, uid()], queryFn: q.listDocuments });
+};
+export const useEvents = (stationId?: string) => {
+  const q = useQ();
+  return useQuery({ queryKey: [...k.events(stationId ?? ""), uid()], queryFn: () => q.listEvents(stationId!), enabled: !!stationId });
+};
+export const useStationHistory = (stationId: string | undefined, range: RangeKey) => {
+  const q = useQ();
+  return useQuery({ queryKey: ["stationHistory", stationId, range, uid()], queryFn: () => q.getStationHistory(stationId!, range), enabled: !!stationId, staleTime: 5 * 60_000 });
+};
+export const useModuleHistory = (moduleId: string | undefined, range: RangeKey) => {
+  const q = useQ();
+  return useQuery({ queryKey: ["moduleHistory", moduleId, range, uid()], queryFn: () => q.getModuleHistory(moduleId!, range), enabled: !!moduleId, staleTime: 5 * 60_000 });
+};
+export const usePowerSeries = (stationId?: string) => {
+  const q = useQ();
+  return useQuery({ queryKey: ["power", stationId, uid()], queryFn: () => q.getPowerSeries(stationId!), enabled: !!stationId, refetchInterval: 60_000 });
+};
+export const useDaily = (stationId: string | undefined, from: string, to: string) => {
+  const q = useQ();
+  return useQuery({ queryKey: ["daily", stationId, from, to, uid()], queryFn: () => q.getDaily(stationId!, from, to), enabled: !!stationId, staleTime: 5 * 60_000 });
+};
+export const useRawTelemetry = (stationId?: string, limit = 200) => {
+  const q = useQ();
+  return useQuery({ queryKey: ["raw", stationId, limit, uid()], queryFn: () => q.getRawTelemetry(stationId!, limit), enabled: !!stationId });
+};
 
 // ---------------------------------------------------------------- simulation flag
-const simListeners = new Set<() => void>();
-api.onChange((t) => t === "simulation" && simListeners.forEach((l) => l()));
 export function useSimulating() {
+  const { realtime, simulation } = useServices();
   return useSyncExternalStore(
-    (cb) => {
-      simListeners.add(cb);
-      return () => simListeners.delete(cb);
-    },
-    () => api.isSimulating(),
+    (cb) => realtime.onChange((t) => t === "simulation" && cb()),
+    () => simulation.isSimulating(),
   );
 }
 
@@ -82,14 +131,15 @@ function invalidateFor(qc: QueryClient, topic: string) {
 export function useLiveSync() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { realtime, queries } = useServices();
   useEffect(() => {
     if (!user) return;
-    const offChange = api.onChange((topic) => {
+    const offChange = realtime.onChange((topic) => {
       if (topic.startsWith("alert-new:")) {
         const id = topic.slice("alert-new:".length);
         qc.invalidateQueries({ queryKey: k.alerts });
         setTimeout(async () => {
-          const alerts = await api.listAlerts();
+          const alerts = await queries.listAlerts();
           const a = alerts.find((x) => x.id === id);
           if (!a || a.severity !== "critical") return;
           const title = `${i18n.t("severity.critical")}: ${i18n.t(`alertCode.${a.code}.title`)}`;
@@ -106,7 +156,7 @@ export function useLiveSync() {
       }
       invalidateFor(qc, topic);
     });
-    const offLive = api.subscribeLive(({ snapshot, modules }) => {
+    const offLive = realtime.subscribeLive(({ snapshot, modules }) => {
       qc.setQueriesData<Record<string, StationSnapshot>>({ queryKey: k.snapshots }, (old) => (old ? { ...old, [snapshot.station_id]: snapshot } : old));
       if (modules) qc.setQueriesData<ModuleReading[]>({ queryKey: k.modulesLatest(snapshot.station_id) }, () => modules);
       qc.setQueriesData<{ ts: string; pv: number; load: number; grid: number; battery: number; soc: number }[]>({ queryKey: ["power", snapshot.station_id] }, (old) =>
@@ -117,30 +167,19 @@ export function useLiveSync() {
       offChange();
       offLive();
     };
-  }, [qc, user]);
+  }, [qc, user, realtime, queries]);
 }
 
 // ---------------------------------------------------------------- fleet overview (derived)
 export function useFleet() {
+  const { clock } = useServices();
   const stations = useStations();
   const customers = useCustomers();
   const snapshots = useSnapshots();
   const alerts = useAlerts();
-  const rows = useMemo(() => {
-    const al = alerts.data ?? [];
-    return (stations.data ?? []).map((s) => {
-      const snap = snapshots.data?.[s.id];
-      const open = al.filter((a: Alert) => a.station_id === s.id && a.status !== "resolved" && a.severity !== "info");
-      return {
-        station: s,
-        customer: customers.data?.find((c) => c.id === s.customer_id),
-        snapshot: snap,
-        openAlerts: open.length,
-        worstSeverity: worstSeverity(open),
-        status: stationStatus(snap, al, s.id, s.last_seen_at),
-        health: healthLabel(snap, undefined, al, s.id),
-      };
-    });
-  }, [stations.data, customers.data, snapshots.data, alerts.data]);
+  const rows = useMemo(
+    () => buildFleetRows(stations.data ?? [], customers.data ?? [], snapshots.data ?? {}, alerts.data ?? [], clock.now()),
+    [stations.data, customers.data, snapshots.data, alerts.data, clock],
+  );
   return { rows, isLoading: stations.isLoading || snapshots.isLoading || alerts.isLoading };
 }

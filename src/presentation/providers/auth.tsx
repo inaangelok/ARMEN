@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
 import i18n from "@/presentation/i18n";
-import type { Profile } from "@/domain/model";
+import type { Lang, Profile } from "@/domain";
 
 interface AuthState {
   user: Profile | null;
@@ -14,6 +14,7 @@ interface AuthState {
 const Ctx = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { auth } = useServices().commands;
   const [user, setUserState] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -23,21 +24,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    api.getSession().then(setUser).catch(() => setUser(null)).finally(() => setLoading(false));
-  }, [setUser]);
+    auth.getSession().then(setUser).catch(() => setUser(null)).finally(() => setLoading(false));
+  }, [setUser, auth]);
 
   const value: AuthState = {
     user,
     loading,
     signIn: async (email, password) => {
-      let p = await api.signIn(email, password);
-      // keep the language chosen on the login screen
-      if (p.language !== i18n.language && ["hy", "en", "ru"].includes(i18n.language)) p = await api.updateMyProfile({ language: i18n.language as Profile["language"] });
+      const uiLang = (["hy", "en", "ru"] as Lang[]).find((l) => l === i18n.language);
+      const p = await auth.signIn(email, password, uiLang);
       setUser(p);
       return p;
     },
     signOut: async () => {
-      await api.signOut();
+      await auth.signOut();
       setUserState(null);
     },
     setUser,

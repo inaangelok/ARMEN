@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Area, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AXIS, GRID, TOOLTIP_STYLE } from "@/presentation/components/charts/ChartCard";
 import { num, time } from "@/presentation/lib/format";
-import type { PowerPoint } from "@/application/ports/backend";
+import type { PowerPoint } from "@/application/ports";
 
 /** Today's power flows (kW) with battery SOC (%) on the right axis. */
 export function PowerChart({ data }: { data: PowerPoint[] }) {

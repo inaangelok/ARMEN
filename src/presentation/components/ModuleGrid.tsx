@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { SIZE_SPECS } from "@/infrastructure/simulation/model";
+import { SIZE_SPECS } from "@/domain";
 import { moduleTone, toneBg, toneBorder, toneText, type Tone } from "@/presentation/lib/tone";
 import { num } from "@/presentation/lib/format";
 import { cn } from "@/presentation/lib/utils";

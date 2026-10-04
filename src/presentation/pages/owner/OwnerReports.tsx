@@ -14,7 +14,7 @@ import { useCustomers, useDaily } from "@/presentation/hooks/data";
 import { useCurrentStation } from "@/presentation/hooks/useCurrentStation";
 import { amd, kwh, monthLabel, num, pct, shortDay } from "@/presentation/lib/format";
 import { exportNodeToPdf } from "@/presentation/lib/pdf";
-import { SIZE_SPECS } from "@/infrastructure/simulation/model";
+import { SIZE_SPECS } from "@/domain";
 import type { Station } from "@/domain/model";
 
 function months(station: Station) {

@@ -8,7 +8,7 @@ import { Input } from "@/presentation/components/ui/input";
 import { Label } from "@/presentation/components/ui/label";
 import { Logo } from "@/presentation/components/Logo";
 import { LanguageSwitcher } from "@/presentation/components/LanguageSwitcher";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
 import { useAuth } from "@/presentation/providers/auth";
 import type { Role } from "@/domain/model";
 
@@ -18,6 +18,7 @@ const ICON: Record<Role, typeof Home> = { owner: Home, technician: HardHat, admi
 export function Login() {
   const { t } = useTranslation();
   const { user, signIn } = useAuth();
+  const { info } = useServices();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -98,11 +99,11 @@ export function Login() {
             </Button>
           </form>
           <div className="relative py-1 text-center text-xs text-muted-foreground">
-            <span className="relative z-10 bg-background px-2">{api.mode === "demo" ? t("login.demoAccounts") : t("login.seededAccounts")}</span>
+            <span className="relative z-10 bg-background px-2">{info.mode === "demo" ? t("login.demoAccounts") : t("login.seededAccounts")}</span>
             <span className="absolute inset-x-0 top-1/2 h-px bg-border" />
           </div>
           <div className="grid gap-2">
-            {api.demoAccounts.map((a) => {
+            {info.demoAccounts.map((a) => {
               const Icon = ICON[a.role];
               return (
                 <Card key={a.role} className="transition hover:shadow-md">

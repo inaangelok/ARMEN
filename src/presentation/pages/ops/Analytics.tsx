@@ -6,17 +6,18 @@ import { Card } from "@/presentation/components/ui/card";
 import { PageHeader } from "@/presentation/components/PageHeader";
 import { ChartCard, AXIS, GRID, TOOLTIP_STYLE } from "@/presentation/components/charts/ChartCard";
 import { useAlerts, useStations, useWorkOrders } from "@/presentation/hooks/data";
-import { api } from "@/composition-root";
-import { estimateYearsTo80 } from "@/infrastructure/simulation/model";
+import { useServices } from "@/presentation/providers/services";
+import { estimateYearsTo80 } from "@/domain";
 import { num } from "@/presentation/lib/format";
 import { format } from "date-fns";
 
 export function Analytics() {
   const { t } = useTranslation();
+  const { queries } = useServices();
   const stations = useStations();
   const alerts = useAlerts();
   const wos = useWorkOrders();
-  const histories = useQueries({ queries: (stations.data ?? []).map((s) => ({ queryKey: ["stationHistory", s.id, "12m", "analytics"], queryFn: () => api.getStationHistory(s.id, "12m"), staleTime: 10 * 60_000 })) });
+  const histories = useQueries({ queries: (stations.data ?? []).map((s) => ({ queryKey: ["stationHistory", s.id, "12m", "analytics"], queryFn: () => queries.getStationHistory(s.id, "12m"), staleTime: 10 * 60_000 })) });
   const loading = histories.some((h) => h.isLoading) || stations.isLoading;
 
   const { trend, degradation, perStation, avgNow } = useMemo(() => {

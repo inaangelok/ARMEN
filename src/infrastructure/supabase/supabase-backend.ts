@@ -9,11 +9,11 @@ import type {
   Alert, AlertRule, ChecklistItem, Customer, DailyEnergy, DocumentRec, EventLogEntry, HistoryPoint, Module, ModuleAssignment,
   ModuleReading, Profile, Station, StationSnapshot, WorkOrder, ServiceRecord,
 } from "@/domain/model";
-import type { Api, LiveEvent, ModuleHistoryPoint, PowerPoint } from "@/application/ports/backend";
+import type { Backend, LiveEvent, ModuleHistoryPoint, PowerPoint } from "@/application/ports";
 
 const num = (v: unknown) => (v === null || v === undefined ? 0 : Number(v));
 
-export function createSupabaseApi(url: string, anonKey: string): Api {
+export function createSupabaseBackend(url: string, anonKey: string): Backend {
   const sb: SupabaseClient = createClient(url, anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
   const changeSubs = new Set<(t: string) => void>();
   const emit = (t: string) => changeSubs.forEach((cb) => cb(t));
@@ -40,7 +40,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     .on("postgres_changes", { event: "*", schema: "public", table: "work_orders" }, () => emit("workorders"))
     .subscribe();
 
-  const api: Api = {
+  const api: Backend = {
     mode: "supabase",
     demoAccounts: [
       { role: "owner", email: "owner@demo.armencare.am", name: "Aram Petrosyan", password: "ArmenCare2026!" },

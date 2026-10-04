@@ -17,6 +17,10 @@ jobs:
       - run: npm ci
       - name: Type-check (also catches missing translation keys)
         run: npm run typecheck
+      - name: Unit tests (domain rules and use cases)
+        run: npm test
+      - name: Architecture boundaries (Clean Architecture dependency rule)
+        run: npm run lint:arch
       - name: Production build
         run: npm run build
       - name: Single-file demo build

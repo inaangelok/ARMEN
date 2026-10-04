@@ -5,23 +5,11 @@
  * demo, the Supabase seed script and the gateway simulator all produce exactly
  * the same numbers. No DOM / Node APIs are used here.
  */
-import type {
-  BatteryMode,
-  ModuleReading,
-  SizeSpec,
-  StationSize,
-  StationSnapshot,
-  SystemsStatus,
-  TodayEnergy,
-} from "@/domain/model";
+import type { BatteryMode, ModuleReading, StationSize, StationSnapshot, SystemsStatus, TodayEnergy } from "@/domain/model";
+import { MODULE_KWH, SIZE_SPECS } from "@/domain/model/catalog";
 
-export const SIZE_SPECS: Record<StationSize, SizeSpec> = {
-  S30: { size: "S30", capacityKwh: 30, modules: 6, rows: 1, cols: 6, massKg: 330, inverterKw: 10, model: "ARMEN Home 30" },
-  M60: { size: "M60", capacityKwh: 60, modules: 12, rows: 2, cols: 6, massKg: 610, inverterKw: 20, model: "ARMEN Pro 60" },
-  L100: { size: "L100", capacityKwh: 100, modules: 20, rows: 2, cols: 10, massKg: 1000, inverterKw: 30, model: "ARMEN Industrial 100" },
-};
+export { MODULE_KWH, SIZE_SPECS };
 
-export const MODULE_KWH = 5;
 export const CELLS_PER_MODULE = 16; // LFP 16S, 51.2 V nominal, 100 Ah
 export const STEP_MIN = 15;
 export const STEP_MS = STEP_MIN * 60_000;
@@ -457,23 +445,4 @@ export function dailyAgg(st: SimStation, dayIdx: number): DailyAgg {
 export function clearModelCaches() {
   dayCache.clear();
   aggCache.clear();
-}
-
-/** Linear-regression based remaining-life estimate (years until SOH reaches 80%). */
-export function estimateYearsTo80(points: { t: number; soh: number }[]): { years: number | null; ratePerYear: number } {
-  if (points.length < 5) return { years: null, ratePerYear: 0 };
-  const n = points.length;
-  const mx = points.reduce((a, p) => a + p.t, 0) / n;
-  const my = points.reduce((a, p) => a + p.soh, 0) / n;
-  let num = 0, den = 0;
-  for (const p of points) {
-    num += (p.t - mx) * (p.soh - my);
-    den += (p.t - mx) ** 2;
-  }
-  const slopePerMs = den === 0 ? 0 : num / den;
-  const ratePerYear = -slopePerMs * 365 * DAY_MS;
-  const current = points[n - 1].soh;
-  if (current <= 80) return { years: 0, ratePerYear };
-  if (ratePerYear <= 0.05) return { years: null, ratePerYear };
-  return { years: (current - 80) / ratePerYear, ratePerYear };
 }

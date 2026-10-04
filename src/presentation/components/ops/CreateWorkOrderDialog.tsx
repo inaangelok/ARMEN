@@ -8,14 +8,16 @@ import { Input, Textarea } from "@/presentation/components/ui/input";
 import { Label } from "@/presentation/components/ui/label";
 import { NativeSelect } from "@/presentation/components/ui/select";
 import { useProfiles, useStations } from "@/presentation/hooks/data";
-import { api } from "@/composition-root";
-import type { Alert, Priority, ServiceType } from "@/domain/model";
+import { useServices } from "@/presentation/providers/services";
+import { errorMessage } from "@/presentation/lib/errors";
+import { priorityForAlert, serviceTypeForAlert, type Alert, type Priority, type ServiceType } from "@/domain";
 
 const TYPES: ServiceType[] = ["inspection_6m", "annual_coolant_fire", "repair", "module_replacement", "commissioning"];
 const PRIOS: Priority[] = ["low", "normal", "high", "urgent"];
 
 export function CreateWorkOrderDialog({ open, onOpenChange, stationId, alert }: { open: boolean; onOpenChange: (o: boolean) => void; stationId?: string; alert?: Alert | null }) {
   const { t } = useTranslation();
+  const { workOrders } = useServices().commands;
   const stations = useStations();
   const profiles = useProfiles();
   const techs = (profiles.data ?? []).filter((p) => p.role === "technician");
@@ -27,10 +29,10 @@ export function CreateWorkOrderDialog({ open, onOpenChange, stationId, alert }: 
     const st = stations.data?.find((s) => s.id === sid);
     setForm({
       station_id: sid,
-      type: alert?.code === "SOH_LOW" ? "module_replacement" : "repair",
+      type: serviceTypeForAlert(alert),
       title: alert ? t(`alertCode.${alert.code}.title`) + (alert.params.module ? ` (${t("modules.module")} ${alert.params.module})` : "") : "",
       description: alert ? t(`alertCode.${alert.code}.desc`, { ...alert.params }) : "",
-      priority: alert?.severity === "critical" ? "urgent" : alert?.severity === "warning" ? "high" : "normal",
+      priority: priorityForAlert(alert),
       assigned_to: st?.technician_id ?? "",
       scheduled_date: "",
     });
@@ -41,11 +43,20 @@ export function CreateWorkOrderDialog({ open, onOpenChange, stationId, alert }: 
     e.preventDefault();
     setBusy(true);
     try {
-      const wo = await api.createWorkOrder({ ...form, issue_type: alert ? "alert" : null, assigned_to: form.assigned_to || null, scheduled_date: form.scheduled_date || null, alert_id: alert?.id ?? null });
+      const wo = await workOrders.createWorkOrder({
+        stationId: form.station_id,
+        title: form.title,
+        description: form.description,
+        type: form.type,
+        priority: form.priority,
+        assignedTo: form.assigned_to || null,
+        scheduledDate: form.scheduled_date || null,
+        alert: alert ?? null,
+      });
       toast.success(t("wo.createdToast", { number: wo.number }));
       onOpenChange(false);
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(errorMessage(err));
     } finally {
       setBusy(false);
     }

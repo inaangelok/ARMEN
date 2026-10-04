@@ -1,4 +1,5 @@
-import type { ServiceType } from "@/domain/model";
+import type { ServiceType, Station } from "../model";
+import { addMonths, DAY_MS } from "./time";
 
 /** Digital checklist templates per service type. Labels are i18n keys under `checklist.*`. */
 export const CHECKLIST_TEMPLATES: Record<ServiceType, string[]> = {
@@ -51,3 +52,20 @@ export const SERVICE_INTERVAL_MONTHS: Partial<Record<ServiceType, number>> = {
   inspection_6m: 6,
   annual_coolant_fire: 12,
 };
+
+/** Next due date after a completed scheduled service (6-monthly inspection or annual coolant/fire check). */
+export function nextServiceDate(type: ServiceType, completedDay: string): string | null {
+  const months = SERVICE_INTERVAL_MONTHS[type];
+  return months ? addMonths(completedDay, months) : null;
+}
+
+/**
+ * Upcoming maintenance for a station: the next 6-monthly inspection (planned by staff) and the next
+ * annual coolant + fire-system check (every 12 months from installation).
+ */
+export function serviceSchedule(station: Pick<Station, "install_date" | "next_service_date">, now: number): { inspection: string | null; annual: string } {
+  const install = station.install_date.slice(0, 10);
+  let k = 1;
+  while (Date.parse(addMonths(install, 12 * k)) < now - DAY_MS) k++;
+  return { inspection: station.next_service_date, annual: addMonths(install, 12 * k) };
+}

@@ -8,7 +8,8 @@ import { Input } from "@/presentation/components/ui/input";
 import { Label } from "@/presentation/components/ui/label";
 import { NativeSelect } from "@/presentation/components/ui/select";
 import { useModules, useWorkOrders } from "@/presentation/hooks/data";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
+import { errorMessage } from "@/presentation/lib/errors";
 import { num } from "@/presentation/lib/format";
 import type { Module, ModuleGrade } from "@/domain/model";
 
@@ -16,6 +17,7 @@ import type { Module, ModuleGrade } from "@/domain/model";
 export function ReplaceModuleDialog({ module, currentSoh, open, onOpenChange, workOrderId }: { module: Module | null; currentSoh?: number; open: boolean; onOpenChange: (o: boolean) => void; workOrderId?: string }) {
   const { t } = useTranslation();
   const modules = useModules();
+  const modulesUc = useServices().commands.modules;
   const wos = useWorkOrders();
   const spares = (modules.data ?? []).filter((m) => m.status === "spare");
   const [spareId, setSpareId] = useState("");
@@ -49,11 +51,11 @@ export function ReplaceModuleDialog({ module, currentSoh, open, onOpenChange, wo
     e.preventDefault();
     setBusy(true);
     try {
-      await api.replaceModule({ faultyModuleId: module.id, newSerial: serial, newGrade: grade, newInitialSoh: soh, reason, workOrderId: wo || null });
+      await modulesUc.replaceModule({ faulty: module, newSerial: serial, newGrade: grade, newInitialSoh: soh, reason, workOrderId: wo || null });
       toast.success(t("replace.done", { pos: `${module.row}-${module.slot}`, serial }));
       onOpenChange(false);
     } catch (err) {
-      toast.error((err as Error).message === "serial_in_use" ? t("replace.serialInUse") : (err as Error).message);
+      toast.error(errorMessage(err));
     } finally {
       setBusy(false);
     }

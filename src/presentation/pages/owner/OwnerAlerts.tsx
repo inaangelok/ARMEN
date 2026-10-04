@@ -8,10 +8,11 @@ import { PageHeader } from "@/presentation/components/PageHeader";
 import { AlertItem } from "@/presentation/components/AlertItem";
 import { useAlerts } from "@/presentation/hooks/data";
 import { useCurrentStation } from "@/presentation/hooks/useCurrentStation";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
 
 export function OwnerAlerts() {
   const { t } = useTranslation();
+  const alertsUc = useServices().commands.alerts;
   const { station } = useCurrentStation();
   const alerts = useAlerts();
   const [tab, setTab] = useState<"active" | "all">("active");
@@ -44,7 +45,7 @@ export function OwnerAlerts() {
               key={a.id}
               alert={a}
               onAck={async () => {
-                await api.setAlertStatus(a.id, "acknowledged");
+                await alertsUc.acknowledgeAlert(a.id);
                 toast.success(t("alerts.acknowledged"));
               }}
             />

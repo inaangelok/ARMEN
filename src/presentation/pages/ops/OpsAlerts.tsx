@@ -7,11 +7,12 @@ import { PageHeader } from "@/presentation/components/PageHeader";
 import { AlertItem } from "@/presentation/components/AlertItem";
 import { CreateWorkOrderDialog } from "@/presentation/components/ops/CreateWorkOrderDialog";
 import { useAlerts, useStations, useWorkOrders } from "@/presentation/hooks/data";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
 import type { Alert, Severity } from "@/domain/model";
 
 export function OpsAlerts() {
   const { t } = useTranslation();
+  const alertsUc = useServices().commands.alerts;
   const alerts = useAlerts();
   const stations = useStations();
   const wos = useWorkOrders();
@@ -62,11 +63,11 @@ export function OpsAlerts() {
               alert={a}
               stationName={stations.data?.find((s) => s.id === a.station_id)?.name}
               onAck={async () => {
-                await api.setAlertStatus(a.id, "acknowledged");
+                await alertsUc.acknowledgeAlert(a.id);
                 toast.success(t("alerts.acknowledged"));
               }}
               onResolve={async () => {
-                await api.setAlertStatus(a.id, "resolved");
+                await alertsUc.resolveAlert(a.id);
                 toast.success(t("alerts.resolved"));
               }}
               onCreateWO={(wos.data ?? []).some((w) => w.alert_id === a.id && w.status !== "done") ? undefined : () => setWoAlert(a)}

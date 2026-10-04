@@ -154,7 +154,7 @@ Seed volume: station telemetry every 15 minutes for 90 days. Module rows are eve
 
 ## 5. How the simulated data works
 
-`src/lib/sim/model.ts` is a small physical model that gives the same output every time:
+`src/infrastructure/simulation/model.ts` is a small physical model that gives the same output every time:
 
 * solar output by Armenian latitude, season and daily cloud cover;
 * load profiles for homes, shops, offices, cold storage and workshops;
@@ -178,7 +178,7 @@ The browser demo, the Supabase seed and the gateway simulator all use this model
 
 The admin and technician fleet page shows every station on a map of Armenia. It has two layers:
 
-* **Built-in map (always on).** Country and province borders, Lake Sevan, rivers, main roads and place names in Armenian, English and Russian. It is bundled with the app (`src/lib/map/`, about 130 KB of [Natural Earth](https://www.naturalearthdata.com/) public-domain data), so the map works offline, behind firewalls and inside the single-file demo.
+* **Built-in map (always on).** Country and province borders, Lake Sevan, rivers, main roads and place names in Armenian, English and Russian. It is bundled with the app (`src/presentation/lib/map/`, about 130 KB of [Natural Earth](https://www.naturalearthdata.com/) public-domain data), so the map works offline, behind firewalls and inside the single-file demo.
 * **Street map (optional).** OpenStreetMap tiles on top of the built-in map. If the tile server cannot be reached, the map switches back to the built-in view automatically. Users can switch between *Street* and *Schematic* in the map's corner; the choice is remembered.
 
 | Variable | Default | Meaning |
@@ -188,25 +188,36 @@ The admin and technician fleet page shows every station on a map of Armenia. It 
 
 Fonts (Plus Jakarta Sans, Noto Sans Armenian, Noto Sans) are also bundled via `@fontsource`, so the app makes no Google Fonts requests.
 
-## 7. Project layout
+## 7. Architecture and project layout
+
+The code follows **Clean Architecture**: business rules in the middle, React and Supabase at the edges. Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the diagrams, the request flow and how to add a feature.
 
 ```
 src/
-  lib/api/        Api interface + demo.ts (in-browser) + supabase.ts
-  lib/sim/        model.ts (physics), dataset.ts (seed scenarios), payload.ts (gateway JSON)
-  lib/map/        armenia-basemap.json (bundled map data), places.ts (hy/en/ru place names)
-  i18n/           hy.ts (default) · en.ts · ru.ts (type-checked: a missing key fails the build)
-  pages/owner/    Home, Battery health, Safety, Alerts, Service, Reports (PDF), Settings
-  pages/ops/      Fleet map/list, Station detail, Work-order Kanban, Modules, Alerts, Rules, Analytics, Users
+  domain/           entities + business rules (pure TypeScript, no React / Supabase / npm imports)
+  application/      ports (interfaces) + use cases (auth, alerts, work orders, modules, stations, users)
+  infrastructure/   adapters: supabase/ · demo/ (in-browser backend) · simulation/ (battery physics) · browser/ (Web Push)
+  presentation/     React UI: pages/ · components/ · hooks/ · i18n/ (hy · en · ru) · lib/ · providers/
+  composition-root.ts   picks Supabase or the demo backend and wires the app
+tests/              domain/ · application/ (use cases with in-memory fakes) · architecture/
 supabase/
-  migrations/     schema + RLS + storage + realtime, checklist templates, roll-up function
-  functions/      ingest · notify · invite-user · _shared/rules.ts (also used by the browser)
-scripts/          seed.ts · simulate-gateway.ts
+  migrations/       schema + RLS + storage + realtime, checklist templates, roll-up function
+  functions/        ingest · notify · invite-user · _shared/rules.ts (generated from the domain)
+scripts/            seed.ts · simulate-gateway.ts · sync-shared.mjs
+docs/               ARCHITECTURE.md · adr/ (decision records) · screenshots/
 ```
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Start the app (demo backend unless Supabase variables are set) |
+| `npm test` | Unit tests for domain rules and use cases (Vitest) |
+| `npm run lint:arch` | Fails if a layer imports something it must not (dependency-cruiser) |
+| `npm run check` | Type-check + tests + architecture check, as in CI |
+| `npm run sync:shared` | Copy the alert engine into the Edge Function after editing `src/domain/services/alert-rules.ts` |
 
 ## 8. Before production
 
-* Replace the placeholder support numbers and e-mail (`src/components/FireInstructions.tsx`, `OwnerSettings.tsx`). Check the emergency numbers (911 / 101) with the Armenian Rescue Service.
+* Replace the placeholder support numbers and e-mail (`src/presentation/components/FireInstructions.tsx`, `OwnerSettings.tsx`). Check the emergency numbers (911 / 101) with the Armenian Rescue Service.
 * Set real tariffs per station. The defaults are 48 ֏/kWh import and 30 ֏/kWh export credit.
 * The seeded work-order titles and descriptions are English sample text. Everything else in the UI is translated. Have a native speaker review the Armenian and Russian copy.
 * Street-map tiles come from OpenStreetMap by default. Their [tile usage policy](https://operations.osmfoundation.org/policies/tiles/) does not allow heavy commercial traffic, so set `VITE_MAP_TILE_URL` to your own provider (e.g. MapTiler, Stadia, Mapbox) before launch.

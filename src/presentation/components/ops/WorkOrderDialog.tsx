@@ -13,18 +13,22 @@ import { Progress } from "@/presentation/components/ui/misc";
 import { ToneBadge } from "@/presentation/components/StatusBadge";
 import { SignaturePad } from "@/presentation/components/ops/SignaturePad";
 import { useChecklist, useCustomers, useProfiles, useStations } from "@/presentation/hooks/data";
-import { api } from "@/composition-root";
+import { useServices } from "@/presentation/providers/services";
+import { errorMessage } from "@/presentation/lib/errors";
+import { isDomainError } from "@/domain";
 import { useAuth } from "@/presentation/providers/auth";
 import { date, dateTime } from "@/presentation/lib/format";
 import { priorityTone, woStatusTone } from "@/presentation/lib/tone";
 import { cn } from "@/presentation/lib/utils";
 import type { PartUsed, Priority, WorkOrder, WorkOrderStatus } from "@/domain/model";
+import type { WorkOrderDetailsPatch } from "@/application/use-cases/work-orders";
 
 function Img({ refStr }: { refStr: string }) {
   const [url, setUrl] = useState<string | null>(null);
+  const { workOrders } = useServices().commands;
   useEffect(() => {
-    api.resolveFileUrl(refStr).then(setUrl);
-  }, [refStr]);
+    workOrders.resolveFileUrl(refStr).then(setUrl);
+  }, [refStr, workOrders]);
   if (!url) return <div className="h-20 w-20 animate-pulse rounded-lg bg-muted" />;
   return (
     <a href={url} target="_blank" rel="noreferrer">
@@ -36,6 +40,7 @@ function Img({ refStr }: { refStr: string }) {
 export function WorkOrderDialog({ wo, open, onOpenChange }: { wo: WorkOrder | null; open: boolean; onOpenChange: (o: boolean) => void }) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { workOrders } = useServices().commands;
   const stations = useStations();
   const customers = useCustomers();
   const profiles = useProfiles();
@@ -67,39 +72,44 @@ export function WorkOrderDialog({ wo, open, onOpenChange }: { wo: WorkOrder | nu
   const done = items.filter((c) => c.done).length;
   const readOnly = wo.status === "done";
 
-  const patch = async (p: Partial<WorkOrder>, msg?: string) => {
+  // Every change goes through a use case, which enforces the work-order rules.
+  const run = async (action: () => Promise<WorkOrder>, msg?: string) => {
     try {
-      await api.updateWorkOrder(wo.id, p);
-      Object.assign(wo, p);
+      Object.assign(wo, await action());
       if (msg) toast.success(msg);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errorMessage(e));
     }
   };
+  const patch = (p: WorkOrderDetailsPatch, msg?: string) => run(() => workOrders.editDetails(wo, p), msg);
+  const move = (to: WorkOrderStatus) => run(() => workOrders.moveWorkOrder(wo, to), t("wo.updated"));
   const toggle = async (id: string, v: boolean) => {
     setLocalChecks((s) => ({ ...s, [id]: v }));
-    await api.updateChecklistItem(id, { done: v });
+    await workOrders.setChecklistItem(id, v);
   };
   const addPhotos = async (files: FileList | null) => {
     if (!files?.length) return;
-    const refs = await Promise.all(Array.from(files).map((f, i) => api.uploadFile("photos", `${wo.station_id}/${wo.id}/${Date.now()}-${i}.${f.name.split(".").pop()}`, f)));
-    await patch({ photos: [...wo.photos, ...refs] }, t("wo.photosAdded"));
+    await run(() => workOrders.attachPhotos(wo, Array.from(files)), t("wo.photosAdded"));
   };
   const complete = async () => {
-    if (done < items.length && !warnIncomplete) {
-      setWarnIncomplete(true);
-      toast.warning(t("wo.incompleteConfirm"));
-      return;
-    }
-    if (!sig && !wo.signature_url) {
-      toast.error(t("wo.signatureRequired"));
-      return;
-    }
     setBusy(true);
     try {
-      const signature_url = sig ? await api.uploadFile("signatures", `${wo.station_id}/${wo.id}.png`, sig) : wo.signature_url;
-      await patch({ status: "done", parts_used: parts, resolution_notes: notes, signed_by: signer || customer?.name || null, signature_url }, t("wo.completed", { number: wo.number }));
+      const updated = await workOrders.completeWorkOrder({
+        workOrder: wo,
+        checklist: items,
+        signature: sig,
+        signedBy: signer || customer?.name || null,
+        partsUsed: parts,
+        notes,
+        acceptIncomplete: warnIncomplete,
+      });
+      Object.assign(wo, updated);
+      toast.success(t("wo.completed", { number: wo.number }));
       onOpenChange(false);
+    } catch (e) {
+      // First attempt with open checklist items asks for confirmation; the second one completes anyway.
+      if (isDomainError(e) && e.code === "CHECKLIST_INCOMPLETE") setWarnIncomplete(true);
+      toast.error(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -130,7 +140,7 @@ export function WorkOrderDialog({ wo, open, onOpenChange }: { wo: WorkOrder | nu
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="space-y-1">
             <Label htmlFor="st">{t("wo.status")}</Label>
-            <NativeSelect id="st" value={wo.status} disabled={readOnly} onChange={(e) => (e.target.value === "done" ? complete() : patch({ status: e.target.value as WorkOrderStatus }, t("wo.updated")))}>
+            <NativeSelect id="st" value={wo.status} disabled={readOnly} onChange={(e) => (e.target.value === "done" ? complete() : move(e.target.value as WorkOrderStatus))}>
               {(["new", "scheduled", "in_progress", "done"] as const).map((s) => (
                 <option key={s} value={s}>
                   {t(`woStatus.${s}`)}
@@ -151,7 +161,7 @@ export function WorkOrderDialog({ wo, open, onOpenChange }: { wo: WorkOrder | nu
           </div>
           <div className="space-y-1">
             <Label htmlFor="sd">{t("wo.scheduledDate")}</Label>
-            <Input id="sd" type="date" disabled={readOnly} value={wo.scheduled_date ?? ""} onChange={(e) => patch({ scheduled_date: e.target.value || null, status: wo.status === "new" && e.target.value ? "scheduled" : wo.status }, t("wo.updated"))} />
+            <Input id="sd" type="date" disabled={readOnly} value={wo.scheduled_date ?? ""} onChange={(e) => patch({ scheduled_date: e.target.value || null }, t("wo.updated"))} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="pr">{t("wo.priority")}</Label>

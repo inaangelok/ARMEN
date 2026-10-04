@@ -12,8 +12,8 @@ import { HealthBadge, ToneBadge } from "@/presentation/components/StatusBadge";
 import { useAlerts, useModuleReadings, useModules, useSnapshots, useStationHistory } from "@/presentation/hooks/data";
 import { useCurrentStation } from "@/presentation/hooks/useCurrentStation";
 import { useThresholds } from "@/presentation/hooks/useThresholds";
-import { SIZE_SPECS } from "@/infrastructure/simulation/model";
-import { healthLabel } from "@/presentation/lib/tone";
+import { SIZE_SPECS } from "@/domain";
+import { healthLabel } from "@/domain";
 import { num } from "@/presentation/lib/format";
 import type { Module, Station } from "@/domain/model";
 

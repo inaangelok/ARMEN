@@ -4,6 +4,7 @@
  * data into Supabase — so both modes show identical stations, alerts and history.
  */
 import { CHECKLIST_TEMPLATES } from "@/domain/services/maintenance";
+import { DEFAULT_ALERT_RULES } from "@/domain/model/default-alert-rules";
 import type {
   Alert,
   AlertRule,
@@ -120,18 +121,7 @@ const STAFF: { key: string; name: string; email: string; role: "technician" | "a
 
 export const DEMO_PASSWORD = "ArmenCare2026!";
 
-export const DEFAULT_RULES: Omit<AlertRule, "id" | "updated_at">[] = [
-  { code: "MODULE_OVER_TEMP", kind: "threshold", metric: "module_temp_c", operator: ">", warning_threshold: 45, critical_threshold: 55, event_severity: null, unit: "°C", enabled: true },
-  { code: "CELL_IMBALANCE", kind: "threshold", metric: "cell_spread_mv", operator: ">", warning_threshold: 50, critical_threshold: 100, event_severity: null, unit: "mV", enabled: true },
-  { code: "SOH_LOW", kind: "threshold", metric: "module_soh_pct", operator: "<", warning_threshold: 85, critical_threshold: 80, event_severity: null, unit: "%", enabled: true },
-  { code: "COOLANT_HIGH", kind: "threshold", metric: "coolant_out_c", operator: ">", warning_threshold: 35, critical_threshold: 42, event_severity: null, unit: "°C", enabled: true },
-  { code: "COMM_LOST", kind: "threshold", metric: "minutes_since_last_seen", operator: ">", warning_threshold: 10, critical_threshold: 60, event_severity: null, unit: "min", enabled: true },
-  { code: "COOLING_PUMP_FAULT", kind: "event", metric: null, operator: null, warning_threshold: null, critical_threshold: null, event_severity: "critical", unit: null, enabled: true },
-  { code: "FIRE_SYSTEM_FAULT", kind: "event", metric: null, operator: null, warning_threshold: null, critical_threshold: null, event_severity: "critical", unit: null, enabled: true },
-  { code: "FIRE_TRIGGERED", kind: "event", metric: null, operator: null, warning_threshold: null, critical_threshold: null, event_severity: "critical", unit: null, enabled: true },
-  { code: "INVERTER_ERROR", kind: "event", metric: null, operator: null, warning_threshold: null, critical_threshold: null, event_severity: "warning", unit: null, enabled: true },
-  { code: "GRID_OUTAGE", kind: "event", metric: null, operator: null, warning_threshold: null, critical_threshold: null, event_severity: "info", unit: null, enabled: true },
-];
+export { DEFAULT_ALERT_RULES as DEFAULT_RULES };
 
 const iso = (ms: number) => new Date(ms).toISOString();
 const isoDate = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -376,7 +366,7 @@ export function buildDataset(nowMs = Date.now(), userIds: Record<string, string>
   }
   events.sort((a, b) => b.ts.localeCompare(a.ts));
 
-  const rules: AlertRule[] = DEFAULT_RULES.map((r) => ({ ...r, id: uuidFrom("rule:" + r.code), updated_at: iso(now - 30 * DAY_MS) }));
+  const rules: AlertRule[] = DEFAULT_ALERT_RULES.map((r) => ({ ...r, id: uuidFrom("rule:" + r.code), updated_at: iso(now - 30 * DAY_MS) }));
 
   const userEmails: Record<string, string> = Object.fromEntries([...STAFF.map((s) => [s.key, s.email]), ...CUSTOMERS.map((c) => [c.owner, c.email])]);
   return { userEmails, nowMs: now, profiles, customers, stations, modules, assignments, sims, alerts, rules, workOrders, checklist, serviceHistory, documents, events, passwords };

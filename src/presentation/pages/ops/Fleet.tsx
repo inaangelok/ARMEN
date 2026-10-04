@@ -12,7 +12,7 @@ import { StationStatusBadge } from "@/presentation/components/StatusBadge";
 import { useFleet } from "@/presentation/hooks/data";
 import { date, num } from "@/presentation/lib/format";
 import { cn } from "@/presentation/lib/utils";
-import { SIZE_SPECS } from "@/infrastructure/simulation/model";
+import { SIZE_SPECS } from "@/domain";
 import type { Region, StationSize, StationStatus } from "@/domain/model";
 
 export function Fleet() {
