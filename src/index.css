@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 155 24% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 155 24% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 155 24% 12%;
+    --primary: 155 24% 18%; /* #22382F */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 150 20% 94%;
+    --secondary-foreground: 155 24% 18%;
+    --muted: 150 14% 95.5%;
+    --muted-foreground: 155 8% 40%;
+    --accent: 150 20% 94%;
+    --accent-foreground: 155 24% 18%;
+    --destructive: 0 66% 47%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 150 12% 89%;
+    --input: 150 12% 85%;
+    --ring: 155 24% 30%;
+    --radius: 0.75rem;
+  }
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "tnum" 0;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Leaflet */
+.leaflet-container {
+  font-family: inherit;
+  border-radius: 1rem;
+}
+.armen-pin {
+  background: transparent;
+  border: 0;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* grid children may shrink below their content width (prevents horizontal overflow on phones) */
+.grid > * {
+  min-width: 0;
+}

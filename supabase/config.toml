@@ -1,0 +1,10 @@
+project_id = "armen-care"
+
+[functions.ingest]
+verify_jwt = false   # gateways authenticate with x-device-key; user JWTs are verified inside the function
+
+[functions.notify]
+verify_jwt = false   # protected by service-role bearer or x-webhook-secret
+
+[functions.invite-user]
+verify_jwt = true

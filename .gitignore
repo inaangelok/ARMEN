@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-demo
+.env
+.env.local
+supabase/.temp
+.DS_Store
+*.log
+.vscode/
+.idea/
+*.tsbuildinfo
